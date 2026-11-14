@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hostel Expense Tracker (₹)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .category-food { background-color: #fef08a; color: #854d0e; }
+        .category-rent { background-color: #bfdbfe; color: #1e40af; }
+        .category-books { background-color: #d9f99d; color: #166534; }
+        .category-transport { background-color: #fecaca; color: #991b1b; }
+        .category-entertainment { background-color: #ddd6fe; color: #5b21b6; }
+        .category-other { background-color: #e5e7eb; color: #4b5563; }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .animate-pulse-slow {
+            animation: pulse 3s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">Hostel Expense Tracker</h1>
+                    <p class="text-gray-600">Track your expenses in Indian Rupees (₹)</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div id="currentBalance" class="bg-white rounded-lg shadow p-3 text-center">
+                        <p class="text-xs text-gray-500">Current Balance</p>
+                        <p class="text-2xl font-bold" id="balanceValue">₹0</p>
+                    </div>
+                    <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/44eee5f1-069e-45ff-80f4-662fb2bae69e.png" alt="Circular profile icon of a smiling Indian college student with a backpack" class="rounded-full w-10 h-10 border-2 border-white shadow">
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <!-- Budget Overview Card -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="font-semibold text-gray-700 dark:text-gray-200">Monthly Budget</h3>
+                        <span class="text-sm bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 px-2 py-1 rounded" id="monthYear">Sep 2023</span>
+                    </div>
+                    <div class="flex items-end justify-between">
+                        <div>
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">Allocated</p>
+                            <p class="text-xl font-bold dark:text-gray-100" id="allocatedBudget">₹10,000</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gray-500 dark:text-gray-400 text-sm">Remaining</p>
+                            <p class="text-xl font-bold text-green-600" id="remainingBudget">₹8,500</p>
+                        </div>
+                    </div>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mt-2">
+                        <div class="bg-green-500 h-2.5 rounded-full" id="budgetProgress" style="width: 75%"></div>
+                    </div>
+                </div>
+                
+                <!-- Expenses Summary Card -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">This Month</h3>
+                    <div class="flex justify-between">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Spent</p>
+                            <p class="text-2xl font-bold text-red-600" id="totalExpenses">₹1,500</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-gray-500 text-sm">Daily Average</p>
+                            <p class="text-2xl font-bold text-purple-600" id="dailyAverage">₹50</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions Card -->
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-700 dark:text-gray-200 mb-3">Quick Actions</h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="openAddExpenseModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add Expense
+                        </button>
+                        <button onclick="openSetBudgetModal()" class="bg-green-600 hover:bg-green-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Set Budget
+                        </button>
+                        <button onclick="showReport()" class="bg-purple-600 hover:bg-purple-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            </svg>
+                            Reports
+                        </button>
+                        <button onclick="openAIAssistant()" class="bg-pink-600 hover:bg-pink-700 text-white py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            AI Insights
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <main>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Recent Transactions -->
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-lg shadow mb-6">
+                        <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                            <h2 class="font-semibold text-lg text-gray-800 dark:text-gray-100">Recent Transactions</h2>
+                            <div class="flex items-center gap-2">
+                                <div class="relative">
+                                    <button id="filterButton" class="flex items-center gap-1 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 px-3 py-1 rounded">
+                                        <span>All Categories</span>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </button>
+                                    <div id="filterDropdown" class="absolute hidden mt-1 w-40 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                                        <ul class="py-1">
+                                            <li><button onclick="filterTransactions('all')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">All Categories</button></li>
+                                            <li><button onclick="filterTransactions('food')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Food</button></li>
+                                            <li><button onclick="filterTransactions('rent')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Rent</button></li>
+                                            <li><button onclick="filterTransactions('books')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Books</button></li>
+                                            <li><button onclick="filterTransactions('transport')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Transport</button></li>
+                                            <li><button onclick="filterTransactions('entertainment')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Entertainment</button></li>
+                                            <li><button onclick="filterTransactions('other')" class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left">Other</button></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <button onclick="refreshData()" class="p-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="divide-y divide-gray-200 dark:divide-gray-700 max-h-96 overflow-y-auto scrollbar-hide" id="transactionsList">
+                            <!-- Transactions will be loaded here -->
+                            <div class="px-4 py-3 animate-pulse">
+                                <div class="text-center py-8 text-gray-400 dark:text-gray-500">
+                                    Loading transactions...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Expense Distribution Chart -->
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <h2 class="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Expense Distribution</h2>
+                        <div class="h-64">
+                            <canvas id="expenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Categories Breakdown --> 
+                <div>
+                    <div class="bg-white rounded-lg shadow p-4 mb-6">
+                        <h2 class="font-semibold text-lg text-gray-800 mb-4">Categories Breakdown</h2>
+                        <div class="space-y-3" id="categoriesBreakdown">
+                            <!-- Categories will be loaded here -->
+                            <div class="animate-pulse h-10 bg-gray-200 rounded"></div>
+                            <div class="animate-pulse h-10 bg-gray-200 rounded"></div>
+                            <div class="animate-pulse h-10 bg-gray-200 rounded"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Budget Progress -->
+                    <div class="bg-white rounded-lg shadow p-4">
+                        <h2 class="font-semibold text-lg text-gray-800 dark:text-gray-100 mb-4">Budget Progress</h2>
+                        <div class="space-y-4">
+                            <div>
+                                <div class="flex justify-between text-sm mb-1">
+                                    <span class="dark:text-gray-200">Food</span>
+                                    <span>₹1,200 / ₹2,000</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-yellow-500 h-2 rounded-full" style="width: 60%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1 dark:text-gray-200">
+                                    <span>Rent</span>
+                                    <span>₹5,000 / ₹5,000</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-blue-500 h-2 rounded-full" style="width: 100%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1 dark:text-gray-200">
+                                    <span>Transport</span>
+                                    <span>₹500 / ₹1,000</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-red-500 h-2 rounded-full" style="width: 50%"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between text-sm mb-1 dark:text-gray-200">
+                                    <span>Entertainment</span>
+                                    <span>₹800 / ₹1,500</span>
+                                </div>
+                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                    <div class="bg-purple-500 h-2 rounded-full" style="width: 53%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Add New Expense</h3>
+            </div>
+            <div class="px-6 py-4">
+                <form id="addExpenseForm">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="expenseAmount">Amount (₹)</label>
+                        <input type="number" id="expenseAmount" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="500" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="expenseCategory">Category</label>
+                        <select id="expenseCategory" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" required>
+                            <option value="">Select a category</option>
+                            <option value="food">Food</option>
+                            <option value="rent">Rent</option>
+                            <option value="books">Books & Stationery</option>
+                            <option value="transport">Transport</option>
+                            <option value="entertainment">Entertainment</option>
+                            <option value="other" class="dark:text-gray-100">Other</option>
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="expenseDate">Date</label>
+                        <input type="date" id="expenseDate" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 text-sm font-medium mb-2" for="expenseDescription">Description (Optional)</label>
+                        <textarea id="expenseDescription" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g., Dinner at mess, Taxi to college"></textarea>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" onclick="closeAddExpenseModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Cancel 
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Add Expense
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Set Budget Modal -->
+    <div id="setBudgetModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Set Monthly Budget</h3>
+            </div>
+            <div class="px-6 py-4">
+                <form id="setBudgetForm">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="budgetAmount">Amount (₹)</label>
+                        <input type="number" id="budgetAmount" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="10000" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="budgetMonth">Month</label>
+                        <input type="month" id="budgetMonth" class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" required>
+                    </div>
+                    <div class="flex justify-end gap-3">
+                        <button type="button" onclick="closeSetBudgetModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            Set Budget
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- AI Assistant Modal -->
+    <div id="aiAssistantModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">AI Expense Assistant</h3>
+                <button onclick="closeAIAssistant()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-4">
+                <div class="bg-gray-100 dark:bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="flex items-start gap-3">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/7933be3c-e77e-40ba-a9a5-c5a8a88bd39d.png" alt="Friendly AI assistant avatar with circular frame and futuristic blue glow" class="rounded-full w-10 h-10 object-cover">
+                        <div class="bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm flex-1">
+                            <p class="text-sm">Hi there! I can help you analyze your expenses, suggest ways to save money, and categorize your transactions automatically. What would you like to know?</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                    <button onclick="askAI('categorize')" class="bg-blue-100 text-blue-800 p-3 rounded-lg text-sm hover:bg-blue-200 transition-colors">
+                        Auto-categorize expenses 
+                    </button>
+                    <button onclick="askAI('savings')" class="bg-green-100 text-green-800 p-3 rounded-lg text-sm hover:bg-green-200 transition-colors">
+                        Show savings tips
+                    </button>
+                    <button onclick="askAI('analysis')" class="bg-purple-100 text-purple-800 p-3 rounded-lg text-sm hover:bg-purple-200 transition-colors">
+                        Analyze spending 
+                    </button>
+                    <button onclick="askAI('predict')" class="bg-yellow-100 text-yellow-800 p-3 rounded-lg text-sm hover:bg-yellow-200 transition-colors">
+                        Predict monthly expenses
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 dark:text-gray-200 text-sm font-medium mb-2" for="aiQuestion">Or ask your own question</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="aiQuestion" class="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" placeholder="How can I save on food expenses?">
+                        <button onclick="askCustomQuestion()" class="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 dark:hover:bg-pink-500">
+                            Ask
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="aiResponseContainer" class="bg-gray-100 rounded-lg p-4 hidden">
+                    <div id="aiResponse" class="text-sm"></div>
+                </div>
+                <!-- AI Loader -->
+                <div id="aiLoader" class="flex justify-center py-4 hidden">
+                    <div class="animate-spin rounded-full h-6 w-6 border-2 border-gray-400 border-t-indigo-600"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Report Modal -->
+    <div id="reportModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-4xl mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Expense Report</h3>
+                <div class="flex items-center gap-2">
+                    <select id="reportPeriod" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" onchange="loadReport()">
+                        <option value="monthly">Monthly</option>
+                        <option value="weekly">Weekly</option>
+                    </select>
+                    <input type="month" id="reportMonth" class="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" onchange="loadReport()">
+                    <button onclick="closeReport()" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-4">
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-200 mb-3">Expense Summary</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500">Total Expenses</p>
+                            <p class="text-xl font-bold" id="reportTotal">₹0</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500">Highest Category</p>
+                            <p class="text-xl font-bold" id="reportHighest">-</p>
+                        </div>
+                        <div class="bg-gray-50 p-3 rounded-lg">
+                            <p class="text-sm text-gray-500">Comparison to Last Month</p>
+                            <p class="text-xl font-bold" id="reportComparison">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="font-medium text-gray-700 dark:text-gray-200 mb-3">Expense Trend</h4>
+                    <div class="h-64">
+                        <canvas id="reportChart"></canvas>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-700 dark:text-gray-200 mb-3">Category Breakdown</h4>
+                    <div class="overflow-x-auto"> 
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th class="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700" id="reportTableBody">
+                                <!-- Report data will be loaded here --> 
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-200">
+                <div class="flex justify-end">
+                    <button onclick="printReport()" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                        Print Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+        <div class="flex items-center">
+            <span id="toastMessage">Operation successful</span>
+        </div>
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirmationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-md mx-4">
+            <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100" id="confirmationTitle">Confirm Action</h3>
+            </div>
+            <div class="px-6 py-4">
+                <p id="confirmationMessage" class="dark:text-gray-200">Are you sure you want to perform this action?</p>
+            </div>
+            <div class="px-6 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+                <button onclick="closeConfirmationModal()" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                    Cancel
+                </button>
+                <button id="confirmActionButton" onclick="executeConfirmedAction()" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global Variables
+        let expenses = [];
+        let budget = {
+            amount: 10000,
+            month: new Date().toISOString().slice(0, 7) // YYYY-MM format
+        };
+        let currentBalance = 15000;
+        let expenseChart = null;
+        let reportChart = null;
+        let confirmationCallback = null;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            initTheme();
+            // Load initial data
+            loadFromLocalStorage();
+            updateDateDisplay();
+            renderExpenseChart();
+            loadTransactions('all');
+            updateBalanceDisplay();
+            updateBudgetDisplay();
+            
+            // Set up form handlers
+            document.getElementById('addExpenseForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addExpense();
+            });
+            
+            document.getElementById('setBudgetForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                setBudget();
+            });
+            
+            // Initialize date pickers with current date/month
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('expenseDate').value = today;
+            document.getElementById('budgetMonth').value = budget.month;
+            document.getElementById('reportMonth').value = budget.month;
+            
+            // Set up filter dropdown
+            document.getElementById('filterButton').addEventListener('click', function() {
+                document.getElementById('filterDropdown').classList.toggle('hidden');
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('#filterButton') && !event.target.closest('#filterDropdown')) {
+                    document.getElementById('filterDropdown').classList.add('hidden');
+                }
+            });
+            
+            // Simulate some initial expenses if none exist
+            if (expenses.length === 0) {
+                const today = new Date();
+                const categories = ['food', 'rent', 'books', 'transport', 'entertainment', 'other'];
+                
+                for (let i = 0; i < 10; i++) {
+                    const randomDays = Math.floor(Math.random() * 30);
+                    const date = new Date(today);
+                    date.setDate(date.getDate() - randomDays);
+                    
+                    const category = categories[Math.floor(Math.random() * categories.length)];
+                    let amount, description;
+                    
+                    switch(category) {
+                        case 'food':
+                            amount = Math.floor(Math.random() * 500) + 50;
+                            description = ['Mess food', 'Canteen lunch', 'Dinner outside', 'Snacks'][Math.floor(Math.random() * 4)];
+                            break;
+                        case 'rent':
+                            amount = 5000;
+                            description = 'Hostel rent';
+                            break;
+                        case 'books':
+                            amount = Math.floor(Math.random() * 2000) + 200;
+                            description = ['Textbook', 'Stationery', 'Notebooks', 'Reference book'][Math.floor(Math.random() * 4)];
+                            break;
+                        case 'transport':
+                            amount = Math.floor(Math.random() * 200) + 20;
+                            description = ['Auto fare', 'Bus pass', 'Metro card recharge'][Math.floor(Math.random() * 3)];
+                            break;
+                        case 'entertainment':
+                            amount = Math.floor(Math.random() * 1000) + 100;
+                            description = ['Movie ticket', 'Concert', 'Party'][Math.floor(Math.random() * 3)];
+                            break;
+                        default:
+                            amount = Math.floor(Math.random() * 500) + 50;
+                            description = ['Miscellaneous', 'Unexpected expense', 'Other'][Math.floor(Math.random() * 3)];
+                    }
+                    
+                    const expense = {
+                        id: 'temp-' + i,
+                        amount: amount,
+                        category: category,
+                        date: date.toISOString().split('T')[0],
+                        description: description
+                    };
+                    
+                    expenses.push(expense);
+                }
+                
+                // Save to localStorage
+                saveToLocalStorage();
+                loadTransactions('all');
+                renderExpenseChart();
+            }
+        });
+        
+        // Theme functions
+        function initTheme() {
+            const theme = localStorage.getItem('theme');
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (theme === 'dark' || (!theme && prefersDark)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('sunIcon').classList.remove('hidden');
+                document.getElementById('moonIcon').classList.add('hidden');
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('moonIcon').classList.remove('hidden');
+                document.getElementById('sunIcon').classList.add('hidden');
+            }
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            const isDark = document.documentElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            document.getElementById('sunIcon').classList.toggle('hidden', !isDark);
+            document.getElementById('moonIcon').classList.toggle('hidden', isDark);
+        }
+
+        // Data storage functions
+        function saveToLocalStorage() {
+            localStorage.setItem('hostelExpenses', JSON.stringify(expenses));
+            localStorage.setItem('hostelBudget', JSON.stringify(budget));
+            localStorage.setItem('hostelBalance', JSON.stringify(currentBalance));
+        }
+        
+        function loadFromLocalStorage() {
+            const savedExpenses = localStorage.getItem('hostelExpenses');
+            const savedBudget = localStorage.getItem('hostelBudget');
+            const savedBalance = localStorage.getItem('hostelBalance');
+            
+            if (savedExpenses) expenses = JSON.parse(savedExpenses);
+            if (savedBudget) budget = JSON.parse(savedBudget);
+            if (savedBalance) currentBalance = JSON.parse(savedBalance);
+        }
+        
+        // Date handling
+        function updateDateDisplay() {
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            
+            const d = new Date();
+            document.getElementById('monthYear').textContent = 
+                monthNames[d.getMonth()] + ' ' + d.getFullYear();
+        }
+        
+        // Expense functions
+        function addExpense() {
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+            const category = document.getElementById('expenseCategory').value;
+            const date = document.getElementById('expenseDate').value;
+            const description = document.getElementById('expenseDescription').value || 'No description';
+            
+            if (!amount || amount <= 0 || !category || !date) {
+                showToast('Please fill all required fields with valid data', 'error');
+                return;
+            }
+            
+            const expense = {
+                id: Date.now().toString(),
+                amount: amount,
+                category: category,
+                date: date,
+                description: description,
+                timestamp: new Date().toISOString()
+            };
+            
+            expenses.push(expense);
+            currentBalance -= amount;
+            
+            saveToLocalStorage();
+            closeAddExpenseModal();
+            loadTransactions('all');
+            updateBalanceDisplay();
+            updateBudgetDisplay();
+            
+            showToast('Expense added successfully!', 'success');
+        }
+        
+        function deleteExpense(id) {
+            showConfirmation(
+                'Delete Expense',
+                'Are you sure you want to delete this expense?',
+                function() {
+                    const expenseIndex = expenses.findIndex(exp => exp.id === id);
+                    if (expenseIndex >= 0) {
+                        const expense = expenses[expenseIndex];
+                        currentBalance += expense.amount;
+                        expenses.splice(expenseIndex, 1);
+                        
+                        saveToLocalStorage();
+                        loadTransactions('all');
+                        updateBalanceDisplay();
+                        updateBudgetDisplay();
+                        
+                        showToast('Expense deleted successfully!', 'success');
+                    }
+                }
+            );
+        }
+        
+        // Budget functions
+        function setBudget() {
+            const amount = parseFloat(document.getElementById('budgetAmount').value);
+            const month = document.getElementById('budgetMonth').value;
+            
+            if (!amount || amount <= 0 || !month) {
+                showToast('Please enter a valid budget amount and month', 'error');
+                return;
+            }
+            
+            budget.amount = amount;
+            budget.month = month;
+            
+            saveToLocalStorage();
+            closeSetBudgetModal();
+            updateBudgetDisplay();
+            
+            showToast('Budget updated successfully!', 'success');
+        }
+        
+        function updateBalanceDisplay() {
+            document.getElementById('balanceValue').textContent = 
+                formatCurrency(currentBalance);
+        }
+        
+        function updateBudgetDisplay() {
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            let totalSpent = 0;
+            
+            if (budget.month === currentMonth) {
+                totalSpent = expenses
+                    .filter(exp => exp.date.startsWith(currentMonth))
+                    .reduce((sum, exp) => sum + exp.amount, 0);
+            }
+            
+            const remainingBudget = budget.amount - totalSpent;
+            const dailyAverage = totalSpent / new Date().getDate();
+            
+            document.getElementById('allocatedBudget').textContent = 
+                formatCurrency(budget.amount);
+            document.getElementById('remainingBudget').textContent = 
+                formatCurrency(remainingBudget);
+            document.getElementById('totalExpenses').textContent = 
+                formatCurrency(totalSpent);
+            document.getElementById('dailyAverage').textContent = 
+                formatCurrency(dailyAverage);
+            
+            const progressPercent = Math.min(100, (totalSpent / budget.amount) * 100);
+            document.getElementById('budgetProgress').style.width = progressPercent + '%';
+            document.getElementById('budgetProgress').className = 
+                progressPercent > 90 ? 'bg-red-500 h-2.5 rounded-full' : 'bg-green-500 h-2.5 rounded-full';
+                
+            // Update categories breakdown
+            updateCategoriesBreakdown(currentMonth);
+        }
+        
+        function updateCategoriesBreakdown(month) {
+            const breakdown = {
+                food: 0,
+                rent: 0,
+                books: 0,
+                transport: 0,
+                entertainment: 0,
+                other: 0
+            };
+            
+            expenses
+                .filter(exp => exp.date.startsWith(month))
+                .forEach(exp => {
+                    breakdown[exp.category] += exp.amount;
+                });
+            
+            const totalSpent = Object.values(breakdown).reduce((sum, amount) => sum + amount, 0);
+            
+            // Update the breakdown list
+            const container = document.getElementById('categoriesBreakdown');
+            container.innerHTML = '';
+            
+            for (const category in breakdown) {
+                if (breakdown[category] > 0) {
+                    const percent = totalSpent > 0 ? (breakdown[category] / totalSpent * 100) : 0;
+                    
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between';
+                    
+                    item.innerHTML = ` 
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full ${getCategoryColorClass(category)}"></span>
+                            <span class="text-sm capitalize">${category}</span>
+                        </div>
+                        <div class="text-sm font-medium">${Math.round(percent)}% - ${formatCurrency(breakdown[category])}</div>
+                    `;
+                    
+                    container.appendChild(item);
+                }
+            }
+            
+            if (container.children.length === 0) {
+                container.innerHTML = '<p class="text-sm text-gray-500 text-center">No expenses recorded this month</p>';
+            }
+        }
+        
+        function getCategoryColorClass(category) {
+            switch(category) {
+                case 'food': return 'bg-yellow-500 dark:bg-yellow-600';
+                case 'rent': return 'bg-blue-500 dark:bg-blue-600';
+                case 'books': return 'bg-green-500 dark:bg-green-600';
+                case 'transport': return 'bg-red-500 dark:bg-red-600';
+                case 'entertainment': return 'bg-purple-500 dark:bg-purple-600';
+                default: return 'bg-gray-500 dark:bg-gray-600';
+            }
+        }
+        
+        // Transaction list functions
+        function loadTransactions(filter = 'all') {
+            const container = document.getElementById('transactionsList');
+            container.innerHTML = '';
+            
+            // Sort by date (newest first)
+            const sortedExpenses = [...expenses].sort((a, b) => 
+                new Date(b.date) - new Date(a.date)
+            );
+            
+            if (sortedExpenses.length === 0) {
+                container.innerHTML = `
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        No expenses recorded yet. Click "Add Expense" to get started! 
+                    </div>
+                `;
+                return;
+            }
+            
+            filteredExpenses = filter === 'all' 
+                ? sortedExpenses 
+                : sortedExpenses.filter(exp => exp.category === filter);
+            
+            if (filteredExpenses.length === 0) {
+                container.innerHTML = `
+                    <div class="px-4 py-8 text-center text-gray-500">
+                        No expenses in this category. Try another filter. 
+                    </div>
+                `;
+                return;
+            }
+            
+            // Group by date
+            const groupedByDate = filteredExpenses.reduce((groups, expense) => {
+                const date = expense.date;
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(expense);
+                return groups;
+            }, {});
+            
+            // Render each date group
+            for (const date in groupedByDate) {
+                const dateExpenses = groupedByDate[date];
+                const dateElement = document.createElement('div');
+                dateElement.className = 'border-b border-gray-200 dark:border-gray-700';
+                
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'px-4 py-3 bg-gray-50 dark:bg-gray-700 flex justify-between';
+                dateHeader.innerHTML = `
+                    <span class="text-sm font-medium text-gray-700">${formatDate(date)}</span>
+                    <span class="text-sm text-gray-500">${formatCurrency(
+                        dateExpenses.reduce((sum, exp) => sum + exp.amount, 0)
+                    )}</span>
+                `;
+                
+                dateElement.appendChild(dateHeader);
+                
+                const expensesList = document.createElement('div');
+                expensesList.className = 'divide-y divide-gray-100 dark:divide-gray-700';
+                
+                dateExpenses.forEach(expense => {
+                    const expenseElement = document.createElement('div');
+                    expenseElement.className = 'px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 group';
+                    expenseElement.innerHTML = `
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="flex items-start gap-3">
+                                <div class="mt-1 p-2 rounded-full ${getCategoryBackgroundClass(expense.category)}">
+                                    ${getCategoryIcon(expense.category)}
+                                </div> 
+                                <div>
+                                    <p class="font-medium text-gray-900">${expense.description}</p>
+                                    <p class="text-xs text-gray-500 capitalize mt-1">${expense.category}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="font-medium text-red-600">- ${formatCurrency(expense.amount)}</p>
+                                <div class="mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button onclick="deleteExpense('${expense.id}')" class="text-xs text-red-600 hover:text-red-800">
+                                        Delete
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    expensesList.appendChild(expenseElement);
+                });
+                
+                dateElement.appendChild(expensesList);
+                container.appendChild(dateElement);
+            }
+        }
+        
+        function filterTransactions(category) {
+            loadTransactions(category);
+            document.getElementById('filterButton').innerHTML = `
+                <span>${category === 'all' ? 'All Categories' : capitalizeFirstLetter(category)}</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            `;
+            document.getElementById('filterDropdown').classList.add('hidden');
+        }
+        
+        function getCategoryBackgroundClass(category) {
+            switch(category) {
+                case 'food': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100';
+                case 'rent': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100';
+                case 'books': return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100';
+                case 'transport': return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100';
+                case 'entertainment': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100';
+                default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100';
+            }
+        }
+        
+        function getCategoryIcon(category) {
+            switch(category) {
+                case 'food':
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>`;
+                case 'rent':
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>`;
+                case 'books':
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>`;
+                case 'transport':
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>`;
+                case 'entertainment':
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>`;
+                default:
+                    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>`;
+            }
+        }
+        
+        function refreshData() {
+            loadTransactions('all');
+            renderExpenseChart();
+            showToast('Data refreshed', 'success');
+        }
+        
+        // Chart functions
+        function renderExpenseChart() {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+            
+            // Calculate category totals
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const monthExpenses = expenses.filter(exp => exp.date.startsWith(currentMonth));
+            
+            const categories = ['food', 'rent', 'books', 'transport', 'entertainment', 'other'];
+            const data = categories.map(category => (
+                monthExpenses
+                    .filter(exp => exp.category === category)
+                    .reduce((sum, exp) => sum + exp.amount, 0)
+            ));
+            
+            // Filter out empty categories
+            const filteredCategories = [];
+            const filteredData = [];
+            
+            categories.forEach((category, index) => {
+                if (data[index] > 0) {
+                    filteredCategories.push(category);
+                    filteredData.push(data[index]);
+                }
+            });
+            
+            const colors = filteredCategories.map(category => {
+                switch(category) {
+                    case 'food': return '#f59e0b';
+                    case 'rent': return '#3b82f6';
+                    case 'books': return '#10b981';
+                    case 'transport': return '#ef4444';
+                    case 'entertainment': return '#8b5cf6';
+                    default: return '#6b7280';
+                }
+            });
+            
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: filteredCategories.map(c => capitalizeFirstLetter(c)),
+                    datasets: [{
+                        data: filteredData,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ₹${value.toLocaleString()} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Report functions
+        function showReport() {
+            document.getElementById('reportModal').classList.remove('hidden');
+            loadReport();
+        }
+        
+        function closeReport() {
+            document.getElementById('reportModal').classList.add('hidden');
+            
+            // Destroy report chart
+            if (reportChart) {
+                reportChart.destroy();
+                reportChart = null;
+            }
+        }
+        
+        function loadReport() {
+            const period = document.getElementById('reportPeriod').value;
+            const month = document.getElementById('reportMonth').value;
+            
+            // Calculate report data based on period
+            let reportData = {};
+            const categories = ['food', 'rent', 'books', 'transport', 'entertainment', 'other'];
+            
+            if (period === 'monthly') {
+                // Monthly report - compare with previous month
+                const currentMonthExpenses = expenses.filter(exp => exp.date.startsWith(month));
+                const prevMonth = getPreviousMonth(month);
+                const prevMonthExpenses = expenses.filter(exp => exp.date.startsWith(prevMonth));
+                
+                // Calculate totals
+                const currentTotal = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                const prevTotal = prevMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                
+                // Calculate category breakdown
+                const breakdown = {};
+                categories.forEach(cat => {
+                    breakdown[cat] = currentMonthExpenses
+                        .filter(exp => exp.category === cat)
+                        .reduce((sum, exp) => sum + exp.amount, 0);
+                });
+                
+                // Find highest spending category
+                let highestCategory = '-';
+                let highestAmount = 0;
+                for (const cat in breakdown) {
+                    if (breakdown[cat] > highestAmount) {
+                        highestAmount = breakdown[cat];
+                        highestCategory = capitalizeFirstLetter(cat);
+                    }
+                }
+                
+                // Calculate comparison with previous month
+                let comparison = '-';
+                if (prevTotal > 0) {
+                    const diff = currentTotal - prevTotal;
+                    const percent = Math.abs(Math.round((diff / prevTotal) * 100));
+                    comparison = diff >= 0 
+                        ? `${percent}% higher than last month` 
+                        : `${percent}% lower than last month`;
+                } else if (currentTotal > 0) {
+                    comparison = 'No previous data to compare';
+                }
+                
+                // Update report summary
+                document.getElementById('reportTotal').textContent = formatCurrency(currentTotal);
+                document.getElementById('reportHighest').textContent = highestCategory;
+                document.getElementById('reportComparison').textContent = comparison;
+                
+                // Update category table
+                const tableBody = document.getElementById('reportTableBody');
+                tableBody.innerHTML = '';
+                
+                for (const cat in breakdown) {
+                    if (breakdown[cat] > 0) {
+                        const percent = Math.round((breakdown[cat] / currentTotal) * 100);
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-3 py-2 text-sm text-gray-700 capitalize">${cat}</td>
+                            <td class="px-3 py-2 text-sm text-gray-700">${formatCurrency(breakdown[cat])}</td>
+                            <td class="px-3 py-2 text-sm text-gray-700">${percent}%</td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                    }
+                }
+                
+                if (tableBody.children.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">
+                                No expenses recorded for this month
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                // Render trend chart (monthly comparison)
+                renderReportChart([
+                    { month: prevMonth, total: prevTotal },
+                    { month: month, total: currentTotal }
+                ]);
+                
+            } else {
+                // Weekly report - last 4 weeks from selected month
+                const weeks = getWeeksInMonth(month);
+                const weeklyData = weeks.map(week => {
+                    const weekExpenses = expenses.filter(exp => {
+                        const expDate = new Date(exp.date);
+                        return expDate >= week.start && expDate <= week.end;
+                    });
+                    return {
+                        week: week.weekNumber,
+                        total: weekExpenses.reduce((sum, exp) => sum + exp.amount, 0),
+                        categories: categories.reduce((obj, cat) => {
+                            obj[cat] = weekExpenses
+                                .filter(exp => exp.category === cat)
+                                .reduce((sum, exp) => sum + exp.amount, 0);
+                            return obj;
+                        }, {})
+                    };
+                });
+                
+                // Update report summary
+                const monthTotal = weeklyData.reduce((sum, week) => sum + week.total, 0);
+                document.getElementById('reportTotal').textContent = formatCurrency(monthTotal);
+                
+                // Find highest spending category for the month
+                const monthBreakdown = weeklyData.reduce((obj, week) => {
+                    for (const cat in week.categories) {
+                        obj[cat] = (obj[cat] || 0) + week.categories[cat];
+                    }
+                    return obj;
+                }, {});
+                
+                let highestCategory = '-';
+                let highestAmount = 0;
+                for (const cat in monthBreakdown) {
+                    if (monthBreakdown[cat] > highestAmount) {
+                        highestAmount = monthBreakdown[cat];
+                        highestCategory = capitalizeFirstLetter(cat);
+                    }
+                }
+                
+                document.getElementById('reportHighest').textContent = highestCategory;
+                
+                // Comparison between first and last week
+                let comparison = '-';
+                if (weeklyData.length >= 2) {
+                    const diff = weeklyData[weeklyData.length - 1].total - weeklyData[0].total;
+                    const percent = Math.abs(Math.round((diff / weeklyData[0].total) * 100));
+                    comparison = diff >= 0 
+                        ? `${percent}% higher than first week` 
+                        : `${percent}% lower than first week`;
+                } else if (weeklyData.length === 1) {
+                    comparison = 'Only one week of data';
+                }
+                
+                document.getElementById('reportComparison').textContent = comparison;
+                
+                // Update category table (show weekly averages)
+                const tableBody = document.getElementById('reportTableBody');
+                tableBody.innerHTML = '';
+                
+                for (const cat in monthBreakdown) {
+                    if (monthBreakdown[cat] > 0) {
+                        const percent = Math.round((monthBreakdown[cat] / monthTotal) * 100);
+                        const weeklyAvg = Math.round(monthBreakdown[cat] / weeklyData.length);
+                        
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="px-3 py-2 text-sm text-gray-700 capitalize">${cat}</td>
+                            <td class="px-3 py-2 text-sm text-gray-700">${formatCurrency(monthBreakdown[cat])}</td>
+                            <td class="px-3 py-2 text-sm text-gray-700">${percent}% (avg ${formatCurrency(weeklyAvg)}/wk)</td>
+                        `;
+                        
+                        tableBody.appendChild(row);
+                    }
+                }
+                
+                if (tableBody.children.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="3" class="px-3 py-4 text-center text-sm text-gray-500">
+                                No expenses recorded for this month
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                // Render trend chart (weekly breakdown)
+                renderReportChart(weeklyData, true);
+            }
+        }
+        
+        function renderReportChart(data, isWeekly = false) {
+            const ctx = document.getElementById('reportChart').getContext('2d');
+            
+            // Destroy previous chart if exists
+            if (reportChart) {
+                reportChart.destroy();
+            }
+            
+            const labels = data.map(item => 
+                isWeekly ? `Week ${item.week}` : formatMonth(item.month)
+            );
+            
+            const datasets = [];
+            
+            if (isWeekly) {
+                // For weekly data, show each category as a separate dataset
+                const categories = ['food', 'rent', 'books', 'transport', 'entertainment', 'other'];
+                const colors = {
+                    food: '#f59e0b',
+                    rent: '#3b82f6',
+                    books: '#10b981',
+                    transport: '#ef4444',
+                    entertainment: '#8b5cf6',
+                    other: '#6b7280'
+                };
+                
+                categories.forEach(category => {
+                    const categoryData = data.map(week => week.categories[category] || 0);
+                    const hasData = categoryData.some(val => val > 0);
+                    
+                    if (hasData) {
+                        datasets.push({
+                            label: capitalizeFirstLetter(category),
+                            data: categoryData,
+                            backgroundColor: colors[category],
+                            borderColor: colors[category],
+                            borderWidth: 1
+                        });
+                    }
+                });
+            } else {
+                // For monthly data, just show the total
+                datasets.push({
+                    label: 'Total Expenses',
+                    data: data.map(month => month.total),
+                    backgroundColor: '#4f46e5',
+                    borderColor: '#4f46e5',
+                    borderWidth: 1
+                });
+            }
+            
+            reportChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return '₹' + value;
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += '₹' + context.raw;
+                                    return label;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function printReport() {
+            window.print();
+        }
+        
+        // AI Assistant functions
+        function openAIAssistant() {
+            document.getElementById('aiAssistantModal').classList.remove('hidden');
+        }
+        
+        function closeAIAssistant() {
+            document.getElementById('aiAssistantModal').classList.add('hidden');
+            document.getElementById('aiResponseContainer').classList.add('hidden');
+            document.getElementById('aiResponse').innerHTML = '';
+        }
+        
+        function askAI(type) {
+            document.getElementById('aiLoader').classList.remove('hidden');
+            document.getElementById('aiResponseContainer').classList.add('hidden');
+            
+            // Simulate API call delay
+            setTimeout(() => {
+                const currentMonthExpenses = expenses.filter(exp => 
+                    exp.date.startsWith(new Date().toISOString().slice(0, 7))
+                );
+                
+                let response = '';
+                
+                switch(type) {
+                    case 'categorize':
+                        // Simulate auto-categorization of uncategorized expenses
+                        const uncategorized = currentMonthExpenses.filter(exp => 
+                            exp.category === 'other' || !exp.category
+                        );
+                        
+                        if (uncategorized.length === 0) {
+                            response = 'All your expenses are already well categorized! Great job keeping your finances organized.';
+                        } else {
+                            response = `I found ${uncategorized.length} uncategorized expenses. Based on my analysis:\n\n`;
+                            
+                            const examples = uncategorized.slice(0, 3);
+                            examples.forEach(exp => {
+                                let category = exp.description.toLowerCase().includes('food') ? 'food' :
+                                    exp.description.toLowerCase().includes('rent') ? 'rent' :
+                                    exp.description.toLowerCase().includes('book') ? 'books' :
+                                    exp.description.toLowerCase().includes('bus') || 
+                                    exp.description.toLowerCase().includes('taxi') ||
+                                    exp.description.toLowerCase().includes('auto') ? 'transport' :
+                                    exp.description.toLowerCase().includes('movie') ||
+                                    exp.description.toLowerCase().includes('concert') ? 'entertainment' :
+                                    'other';
+                                
+                                response += `• "${exp.description}" (₹${exp.amount}) - I suggest categorizing as <strong>${category}</strong>\n`;
+                            });
+                            
+                            if (uncategorized.length > 3) {
+                                response += `\n...and ${uncategorized.length - 3} more that I can categorize for you.`;
+                            }
+                            
+                            response += '\n\nWould you like me to update these automatically?';
+                            
+                            // Add a button to apply changes
+                            response += '<div class="mt-4"><button onclick="applyCategorySuggestions()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Apply Suggestions</button></div>';
+                        }
+                        break;
+                        
+                    case 'savings':
+                        // Analyze spending and suggest savings
+                        const foodSpent = currentMonthExpenses
+                            .filter(exp => exp.category === 'food')
+                            .reduce((sum, exp) => sum + exp.amount, 0);
+                        
+                        const entertainmentSpent = currentMonthExpenses
+                            .filter(exp => exp.category === 'entertainment')
+                            .reduce((sum, exp) => sum + exp.amount, 0);
+                            
+                        const transportSpent = currentMonthExpenses
+                            .filter(exp => exp.category === 'transport')
+                            .reduce((sum, exp) => sum + exp.amount, 0);
+                            
+                        response = 'Here are some ways you could save money:\n\n';
+                        
+                        if (foodSpent > 2000) {
+                            response += `• You've spent ₹${foodSpent} on food this month. Consider eating at the hostel mess more often to save 20-30%.\n`;
+                        }
+                        
+                        if (entertainmentSpent > 1000) {
+                            response += `• Your entertainment spending is ₹${entertainmentSpent}. Look for student discounts on movies and events.\n`;
+                        }
+                        
+                        if (transportSpent > 500) {
+                            response += `• Transport costs of ₹${transportSpent} could be reduced by using student bus passes or carpooling.\n`;
+                        }
+                        
+                        if (foodSpent <= 2000 && entertainmentSpent <= 1000 && transportSpent <= 500) {
+                            response = 'You\'re doing great with your spending! Your expenses are at reasonable levels for a student. Keep it up!';
+                        } else {
+                            response += '\nThese changes could save you ' + 
+                                (foodSpent > 2000 ? '₹' + Math.round(foodSpent * 0.2) + '-₹' + Math.round(foodSpent * 0.3) + ' on food, ' : '') +
+                                (entertainmentSpent > 1000 ? '₹' + Math.round(entertainmentSpent * 0.15) + '-₹' + Math.round(entertainmentSpent * 0.25) + ' on entertainment, ' : '') +
+                                (transportSpent > 500 ? '₹' + Math.round(transportSpent * 0.3) + '-₹' + Math.round(transportSpent * 0.4) + ' on transport' : '') + 
+                                ' each month.';
+                        }
+                        break;
+                        
+                    case 'analysis':
+                        // Provide spending analysis
+                        const totalSpent = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+                        const dailyAverage = totalSpent / new Date().getDate();
+                        const dailyBudget = budget.amount / new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+                        
+                        response = 'Your spending analysis:\n\n';
+                        response += `• Total spent this month: ₹${totalSpent}\n`;
+                        response += `• Daily average: ₹${Math.round(dailyAverage)}\n`;
+                        response += `• Recommended daily budget: ₹${Math.round(dailyBudget)}\n\n`;
+                        
+                        if (dailyAverage > dailyBudget) {
+                            response += `You're currently spending ₹${Math.round(dailyAverage - dailyBudget)} more per day than recommended. Try to reduce non-essential expenses.`;
+                        } else {
+                            response += `Good job! You're within your daily budget target.`;
+                        }
+                        
+                        // Add a simple prediction
+                        const projectedMonthEnd = Math.round(dailyAverage * new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate());
+                        response += `\n\nAt this rate, you'll spend approximately ₹${projectedMonthEnd} this month, `;
+                        
+                        if (projectedMonthEnd > budget.amount) {
+                            response += `which is ₹${projectedMonthEnd - budget.amount} over your budget.`;
+                        } else {
+                            response += `leaving ₹${budget.amount - projectedMonthEnd} of your budget unspent.`;
+                        }
+                        break;
+                        
+                    case 'predict':
+                        // Predict future spending
+                        response = 'Based on your spending patterns:\n\n';
+                        
+                        // Group by weekday to find weekly patterns
+                        const weekdaySpending = [0, 0, 0, 0, 0, 0, 0]; // Sun-Sat
+                        const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
+                        
+                        currentMonthExpenses.forEach(exp => {
+                            const day = new Date(exp.date).getDay(); // 0-6
+                            weekdaySpending[day] += exp.amount;
+                            weekdayCounts[day]++;
+                        });
+                        
+                        const avgWeekdaySpending = weekdaySpending.map((total, i) => 
+                            weekdayCounts[i] > 0 ? Math.round(total / weekdayCounts[i]) : 0
+                        );
+                        
+                        // Find peak spending day
+                        const peakDayIndex = avgWeekdaySpending.indexOf(Math.max(...avgWeekdaySpending));
+                        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                        
+                        if (peakDayIndex >= 0 && avgWeekdaySpending[peakDayIndex] > 0) {
+                            response += `• You tend to spend the most on <strong>${days[peakDayIndex]}s</strong> (avg ₹${avgWeekdaySpending[peakDayIndex]})\n`;
+                        }
+                        
+                        // Predict remaining month
+                        const today = new Date();
+                        const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+                        const daysRemaining = daysInMonth - today.getDate();
+                        
+                        if (daysRemaining > 0) {
+                            const projectedRemaining = Math.round(
+                                (currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0) / today.getDate()) * daysRemaining
+                            );
+                            
+                            response += `\n• Projected spending for the rest of the month: ₹${projectedRemaining}\n`;
+                            response += `• With your current budget, you have ₹${budget.amount - currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0)} remaining.\n\n`;
+                            
+                            if (projectedRemaining > (budget.amount - currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0))) {
+                                response += 'Based on this projection, you may exceed your budget. Consider reducing discretionary spending.';
+                            } else {
+                                response += 'Your spending is on track to stay within budget.';
+                            }
+                        }
+                        break;
+                }
+                
+                document.getElementById('aiResponse').innerHTML = response.replace(/\n/g, '<br>');
+                document.getElementById('aiResponseContainer').classList.remove('hidden');
+                document.getElementById('aiLoader').classList.add('hidden');
+            }, 1500);
+        }
+        
+        function askCustomQuestion() {
+            const question = document.getElementById('aiQuestion').value.trim();
+            if (!question) {
+                showToast('Please enter a question', 'error');
+                return;
+            }
+            
+            document.getElementById('aiLoader').classList.remove('hidden');
+            document.getElementById('aiResponseContainer').classList.add('hidden');
+            
+            // Simulate API call delay
+            setTimeout(() => {
+                let response = `Regarding your question "<strong>${question}</strong>":\n\n`;
+                
+                // Very simple keyword-based response simulation
+                if (question.toLowerCase().includes('save') || question.toLowerCase().includes('reduce')) {
+                    const foodSpent = expenses
+                        .filter(exp => exp.category === 'food' && exp.date.startsWith(new Date().toISOString().slice(0, 7)))
+                        .reduce((sum, exp) => sum + exp.amount, 0);
+                    
+                    response += 'To save money, consider these tips:\n';
+                    response += '1. Reduce eating out - cooking in the hostel can save ₹' + Math.round(foodSpent * 0.25) + ' per month\n';
+                    response += '2. Use public transport instead of autos/taxis\n';
+                    response += '3. Take advantage of student discounts for entertainment\n';
+                } else if (question.toLowerCase().includes('category') || question.toLowerCase().includes('categorize')) {
+                    response += 'You currently have these expense categories:\n';
+                    response += '• Food\n• Rent\n• Books\n• Transport\n• Entertainment\n• Other\n\n';
+                    response += 'I can help automatically categorize expenses based on their descriptions. Would you like me to review your uncategorized expenses?';
+                } else {
+                    response += 'I analyzed your spending patterns and can see that:\n';
+                    response += '• Your biggest expense category is ' + 
+                        getTopCategory(new Date().toISOString().slice(0, 7)) + '\n';
+                    response += '• You have ' + 
+                        Math.round((expenses.filter(exp => exp.date.startsWith(new Date().toISOString().slice(0, 7))).reduce((sum, exp) => sum + exp.amount, 0) / budget.amount) * 100) + 
+                        '% of your budget remaining\n';
+                    response += '• Your spending is ' + 
+                        (Math.random() > 0.5 ? 'higher' : 'lower') + ' than the typical hostel student\n\n';
+                    response += 'Would you like more specific advice on any of these areas?';
+                }
+                
+                document.getElementById('aiResponse').innerHTML = response.replace(/\n/g, '<br>');
+                document.getElementById('aiResponseContainer').classList.remove('hidden');
+                document.getElementById('aiLoader').classList.add('hidden');
+                document.getElementById('aiQuestion').value = '';
+            }, 2000);
+        }
+        
+        function getTopCategory(month) {
+            const categories = ['food', 'rent', 'books', 'transport', 'entertainment', 'other'];
+            const totals = {};
+            
+            categories.forEach(cat => {
+                totals[cat] = expenses
+                    .filter(exp => exp.category === cat && exp.date.startsWith(month))
+                    .reduce((sum, exp) => sum + exp.amount, 0);
+            });
+            
+            let topCategory = 'other';
+            let maxAmount = 0;
+            
+            for (const cat in totals) {
+                if (totals[cat] > maxAmount) {
+                    maxAmount = totals[cat];
+                    topCategory = cat;
+                }
+            }
+            
+            return topCategory;
+        }
+        
+        function applyCategorySuggestions() {
+            // Simulate updating uncategorized expenses
+            let updatedCount = 0;
+            
+            expenses.forEach(exp => {
+                if (exp.category === 'other' || !exp.category) {
+                    // Very simple categorization logic based on keywords
+                    const newCategory = exp.description.toLowerCase().includes('food') ? 'food' :
+                        exp.description.toLowerCase().includes('rent') ? 'rent' :
+                        exp.description.toLowerCase().includes('book') ? 'books' :
+                        exp.description.toLowerCase().includes('bus') || 
+                        exp.description.toLowerCase().includes('taxi') ||
+                        exp.description.toLowerCase().includes('auto') ? 'transport' :
+                        exp.description.toLowerCase().includes('movie') ||
+                        exp.description.toLowerCase().includes('concert') ? 'entertainment' :
+                        null;
+                    
+                    if (newCategory) {
+                        exp.category = newCategory;
+                        updatedCount++;
+                    }
+                }
+            });
+            
+            if (updatedCount > 0) {
+                saveToLocalStorage();
+                loadTransactions('all');
+                renderExpenseChart();
+                
+                document.getElementById('aiResponse').innerHTML += 
+                    `<div class="mt-4 p-2 bg-green-100 text-green-800 rounded"><strong>Success!</strong> Updated categories for ${updatedCount} expenses.</div>`;
+            } else {
+                document.getElementById('aiResponse').innerHTML += 
+                    `<div class="mt-4 p-2 bg-yellow-100 text-yellow-800 rounded">No uncategorized expenses found to update.</div>`;
+            }
+        }
+        
+        // Utility functions
+        function formatCurrency(amount) {
+            return '₹' + amount.toLocaleString('en-IN');
+        }
+        
+        function formatDate(dateStr) {
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('en-IN', options);
+        }
+        
+        function formatMonth(monthStr) {
+            const [year, month] = monthStr.split('-');
+            const monthNames = ["January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"];
+            return `${monthNames[parseInt(month) - 1]} ${year}`;
+        }
+        
+        function capitalizeFirstLetter(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+        
+        function getPreviousMonth(monthStr) {
+            const [year, month] = monthStr.split('-').map(Number);
+            if (month === 1) {
+                return `${year - 1}-12`;
+            } else {
+                return `${year}-${(month - 1).toString().padStart(2, '0')}`;
+            }
+        }
+        
+        function getWeeksInMonth(monthStr) {
+            const [year, month] = monthStr.split('-').map(Number);
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            
+            const weeks = [];
+            let currentWeek = 1;
+            let currentStart = new Date(firstDay);
+            
+            // Adjust to start weeks on Monday (1) instead of Sunday (0)
+            if (currentStart.getDay() === 0) {
+                currentStart.setDate(currentStart.getDate() - 6);
+            } else {
+                currentStart.setDate(currentStart.getDate() - (currentStart.getDay() - 1));
+            }
+            
+            while (currentStart <= lastDay) {
+                const currentEnd = new Date(currentStart);
+                currentEnd.setDate(currentEnd.getDate() + 6);
+                
+                // Ensure the week doesn't go beyond the month
+                if (currentEnd > lastDay) {
+                    currentEnd = new Date(lastDay);
+                }
+                
+                // Only include weeks that actually have days in the current month
+                if (currentEnd >= firstDay) {
+                    weeks.push({
+                        weekNumber: currentWeek,
+                        start: new Date(Math.max(currentStart, firstDay)),
+                        end: new Date(Math.min(currentEnd, lastDay))
+                    });
+                }
+                
+                currentStart.setDate(currentStart.getDate() + 7);
+                currentWeek++;
+            }
+            
+            return weeks;
+        }
+        
+        // Modal functions
+        function openAddExpenseModal() {
+            document.getElementById('addExpenseModal').classList.remove('hidden');
+            document.getElementById('expenseDate').value = new Date().toISOString().split('T')[0];
+        }
+        
+        function closeAddExpenseModal() {
+            document.getElementById('addExpenseModal').classList.add('hidden');
+            document.getElementById('addExpenseForm').reset();
+        }
+        
+        function openSetBudgetModal() {
+            document.getElementById('setBudgetModal').classList.remove('hidden');
+            document.getElementById('budgetAmount').value = budget.amount;
+            document.getElementById('budgetMonth').value = budget.month;
+        }
+        
+        function closeSetBudgetModal() {
+            document.getElementById('setBudgetModal').classList.add('hidden');
+        }
+        
+        // Toast notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.querySelector('#toastMessage').textContent = message;
+            
+            // Set color based on type
+            toast.className = 'fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 flex items-center ';
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600', 'text-white');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600', 'text-white');
+            } else {
+                toast.classList.add('bg-blue-600', 'text-white');
+            }
+            
+            // Show toast
+            toast.classList.remove('hidden');
+            
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // Confirmation dialog
+        function showConfirmation(title, message, callback) {
+            document.getElementById('confirmationTitle').textContent = title;
+            document.getElementById('confirmationMessage').textContent = message;
+            document.getElementById('confirmationModal').classList.remove('hidden');
+            confirmationCallback = callback;
+        }
+        
+        function closeConfirmationModal() {
+            document.getElementById('confirmationModal').classList.add('hidden');
+            confirmationCallback = null;
+        }
+        
+        function executeConfirmedAction() {
+            if (confirmationCallback) {
+                confirmationCallback();
+            }
+            closeConfirmationModal();
+        }
+    </script>
+</body>
+</html>
